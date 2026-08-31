@@ -10,6 +10,7 @@ const authRoutes = require("./routes/auth");
 const collegeRoutes = require("./routes/colleges");
 const eventRoutes = require("./routes/events");
 const verificationRoutes = require("./routes/verification");
+const statsRoutes = require("./routes/stats");
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -26,6 +27,7 @@ app.use("/auth", authRoutes);
 app.use("/colleges", collegeRoutes);
 app.use("/events", eventRoutes);
 app.use("/admin/verification-queue", verificationRoutes);
+app.use("/stats", statsRoutes);
 
 app.listen(PORT, () => {
   console.log(`Circular backend running on http://localhost:${PORT}`);
