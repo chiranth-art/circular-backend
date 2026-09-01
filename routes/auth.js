@@ -23,9 +23,11 @@ function findUserByEmail(db, email) {
 router.post("/signup/student", async (req, res) => {
   const { full_name, email, password, college_id, branch, year } = req.body;
 
-  if (!full_name || !email || !password || !college_id) {
-    return res.status(400).json({ error: "full_name, email, password, and college_id are required." });
-  }
+  if (!full_name || !email || !password) {
+  return res.status(400).json({
+    error: "full_name, email, and password are required."
+  });
+}
 
   const db = readDB();
 
@@ -33,26 +35,23 @@ router.post("/signup/student", async (req, res) => {
     return res.status(409).json({ error: "An account with this email already exists." });
   }
 
-  const collegeExists = db.colleges.some((c) => c.id === college_id);
-  if (!collegeExists) {
-    return res.status(400).json({ error: "Invalid college_id. Call GET /colleges to see valid options." });
-  }
+  
 
   // Never store the plain password — always hash it.
   const password_hash = await bcrypt.hash(password, 10);
 
   const newUser = {
-    id: db.users.length + 1,
-    full_name,
-    email,
-    password_hash,
-    role: "student",
-    college_id,
-    branch: branch || null,
-    year: year || null,
-    is_verified: true, // students don't need manual approval
-    created_at: new Date().toISOString()
-  };
+  id: db.users.length + 1,
+  full_name,
+  email,
+  password_hash,
+  role: "student",
+  college_id: null,
+  branch: null,
+  year: null,
+  is_verified: true,
+  created_at: new Date().toISOString()
+};
 
   db.users.push(newUser);
   writeDB(db);
