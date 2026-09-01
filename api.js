@@ -3,18 +3,22 @@
 // instead of writing raw fetch() calls themselves — it keeps the URLs
 // and field names consistent with the actual backend.
 
-// CHANGE THIS to your ngrok URL while testing together,
-// e.g. "https://a1b2-3c4d.ngrok-free.app"
-// Once the backend is properly deployed later, it changes once more
-// (e.g. to "https://circular-backend.up.railway.app") — nothing else
-// in this file needs to change.
-const BASE_URL = "http://localhost:4000";
+// CHANGE THIS to your live backend URL.
+// This is now permanent — Render, not a temporary ngrok tunnel.
+const BASE_URL = "https://circular-backend-t3mk.onrender.com";
 
 // Get the list of colleges (for signup dropdowns)
 export async function getColleges() {
   const res = await fetch(`${BASE_URL}/colleges`);
   if (!res.ok) throw new Error("Failed to load colleges");
   return res.json(); // [{ id, name, code }, ...]
+}
+
+// Get homepage stats and category counts — all real numbers.
+export async function getStats() {
+  const res = await fetch(`${BASE_URL}/stats`);
+  if (!res.ok) throw new Error("Failed to load stats");
+  return res.json(); // { total_colleges, total_events, categories: [{ category, count }] }
 }
 
 // Sign up a student
@@ -55,16 +59,51 @@ export async function login({ email, password }) {
 
 // Get events for the browse page. All filters are optional.
 // Example: getEvents({ category: "Hackathon", search: "robotics" })
-export async function getEvents({ college_id, category, search } = {}) {
+// This ALSO powers the search bar and category tiles — same function,
+// just called with different filters.
+//
+// For "near me": pass { lat, lng } (see getStudentLocation() below to
+// get these from the browser). Every event comes back with a
+// distance_km field and the list is sorted nearest-first automatically.
+export async function getEvents({ college_id, category, search, lat, lng } = {}) {
   const params = new URLSearchParams();
   if (college_id) params.append("college_id", college_id);
   if (category) params.append("category", category);
   if (search) params.append("search", search);
+  if (lat !== undefined && lng !== undefined) {
+    params.append("lat", lat);
+    params.append("lng", lng);
+  }
 
   const query = params.toString() ? `?${params.toString()}` : "";
   const res = await fetch(`${BASE_URL}/events${query}`);
   if (!res.ok) throw new Error("Failed to load events");
-  return res.json(); // [{ id, ref_id, title, date, venue, category, description, registration_link, college_name, ... }]
+  return res.json(); // [{ id, ref_id, title, date, venue, category, description, registration_link, college_name, college_city, distance_km?, ... }]
+}
+
+// Asks the BROWSER for the student's current location (this triggers
+// the "Allow this site to know your location?" permission popup).
+// This is a frontend-only concern — your backend never sees raw GPS
+// data unless the frontend explicitly sends it as lat/lng, like above.
+// Usage: const { lat, lng } = await getStudentLocation();
+export function getStudentLocation() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("Geolocation isn't supported in this browser."));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        });
+      },
+      (err) => {
+        reject(new Error("Location permission denied or unavailable."));
+      }
+    );
+  });
 }
 
 // Post a new event. Only works if the logged-in user is a VERIFIED admin.
@@ -82,52 +121,3 @@ export async function postEvent(token, { title, date, venue, category, descripti
   if (!res.ok) throw new Error(data.error || "Failed to publish event");
   return data; // { message, event: { id, ref_id, title, ... } }
 }
-
-/*
-Example usage in a form's submit handler:
-
-import { signupStudent } from "./api.js";
-
-async function handleSignup(formData) {
-  try {
-    const result = await signupStudent({
-      full_name: formData.name,
-      email: formData.email,
-      password: formData.password,
-      college_id: Number(formData.collegeId),
-      branch: formData.branch,
-      year: formData.year
-    });
-    console.log("Signed up:", result);
-    // redirect to a "check your account" or login page
-  } catch (err) {
-    alert(err.message); // shows "An account with this email already exists." etc.
-  }
-}
-
-After login, save the token somewhere the app can reuse it for future
-requests that need auth (e.g. posting an event). In plain JS/React,
-keep it in memory (a variable or state) rather than localStorage where
-possible, since this project avoids browser storage in some environments.
-
-Example: posting an event after login (only works if the user is a
-verified admin — students and unverified admins will get an error).
-
-import { login, postEvent } from "./api.js";
-
-async function handlePostEvent(loginToken, eventForm) {
-  try {
-    const result = await postEvent(loginToken, {
-      title: eventForm.title,
-      date: eventForm.date,
-      venue: eventForm.venue,
-      category: eventForm.category,
-      description: eventForm.description,
-      registration_link: eventForm.link
-    });
-    console.log("Published:", result.event.ref_id);
-  } catch (err) {
-    alert(err.message); // e.g. "Your admin account isn't verified yet."
-  }
-}
-*/
