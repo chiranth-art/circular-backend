@@ -592,6 +592,7 @@ async function writeDB(data) {
 // ============================================================
 
 module.exports = {
+  pool,
   readDB,
   writeDB
 };
