@@ -15,8 +15,8 @@ router.post("/signup/student", async (req, res) => {
   try {
     const { full_name, email, password, college_id, branch, year } = req.body;
 
-    if (!full_name || !email || !password || !college_id) {
-      return res.status(400).json({ error: "full_name, email, password, and college_id are required." });
+    if (!full_name || !email || !password) {
+      return res.status(400).json({ error: "full_name, email, and password are required." });
     }
 
     const db = await readDB();
@@ -25,9 +25,13 @@ router.post("/signup/student", async (req, res) => {
       return res.status(409).json({ error: "An account with this email already exists." });
     }
 
-    const collegeExists = db.colleges.some((c) => c.id === Number(college_id));
-    if (!collegeExists) {
-      return res.status(400).json({ error: "Invalid college_id. Call GET /colleges to see valid options." });
+    let validCollegeId = null;
+    if (college_id !== undefined && college_id !== null && college_id !== "") {
+      const collegeExists = db.colleges.some((c) => c.id === Number(college_id));
+      if (!collegeExists) {
+        return res.status(400).json({ error: "Invalid college_id. Call GET /colleges to see valid options." });
+      }
+      validCollegeId = Number(college_id);
     }
 
     const password_hash = await bcrypt.hash(password, 10);
@@ -37,7 +41,7 @@ router.post("/signup/student", async (req, res) => {
       email,
       password_hash,
       role: "student",
-      college_id: Number(college_id),
+      college_id: validCollegeId,
       branch: branch || null,
       year: year || null,
       is_verified: true
