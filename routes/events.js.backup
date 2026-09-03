@@ -1,0 +1,685 @@
+// seed-events.js
+// Seeds realistic DEMO events into the PostgreSQL database.
+// These are sample events for testing the Circular app.
+// They are NOT real/upcoming college events.
+
+require("dotenv").config();
+
+const { Pool } = require("pg");
+
+if (!process.env.DATABASE_URL) {
+  console.error("❌ DATABASE_URL is not set in .env");
+  process.exit(1);
+}
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
+
+// ============================================================
+// DEMO EVENTS
+// ============================================================
+
+const EVENTS = [
+  {
+    ref_id: "AY-DEMO-001",
+    college_code: "AY",
+    title: "AI & Machine Learning Workshop",
+    date: "2026-09-15",
+    venue: "Seminar Hall",
+    category: "Workshop",
+    description:
+      "A hands-on introductory workshop covering artificial intelligence, machine learning fundamentals, model building and practical applications.",
+    registration_link: ""
+  },
+  {
+    ref_id: "AY-DEMO-002",
+    college_code: "AY",
+    title: "CodeSprint 2026",
+    date: "2026-09-22",
+    venue: "Computer Science Block",
+    category: "Coding",
+    description:
+      "A programming challenge where students solve algorithmic and problem-solving questions.",
+    registration_link: ""
+  },
+  {
+    ref_id: "AP-DEMO-001",
+    college_code: "AP",
+    title: "Web Development Bootcamp",
+    date: "2026-09-18",
+    venue: "IT Lab",
+    category: "Workshop",
+    description:
+      "Learn the fundamentals of modern web development including HTML, CSS, JavaScript and APIs.",
+    registration_link: ""
+  },
+  {
+    ref_id: "AM-DEMO-001",
+    college_code: "AM",
+    title: "Tech Innovation Expo",
+    date: "2026-10-05",
+    venue: "Main Auditorium",
+    category: "Technology",
+    description:
+      "Student projects and innovative technology solutions will be showcased.",
+    registration_link: ""
+  },
+  {
+    ref_id: "AR-DEMO-001",
+    college_code: "AR",
+    title: "Data Science & Analytics Workshop",
+    date: "2026-09-25",
+    venue: "Innovation Centre",
+    category: "Workshop",
+    description:
+      "An introductory session on data analysis, visualization and machine learning workflows.",
+    registration_link: ""
+  },
+  {
+    ref_id: "AT-DEMO-001",
+    college_code: "AT",
+    title: "Hackathon 2026",
+    date: "2026-10-10",
+    venue: "Innovation Lab",
+    category: "Hackathon",
+    description:
+      "A team-based coding event focused on building innovative software solutions.",
+    registration_link: ""
+  },
+  {
+    ref_id: "BC-DEMO-001",
+    college_code: "BC",
+    title: "Artificial Intelligence Seminar",
+    date: "2026-09-20",
+    venue: "Main Seminar Hall",
+    category: "Seminar",
+    description:
+      "An educational seminar introducing current AI concepts, applications and career opportunities.",
+    registration_link: ""
+  },
+  {
+    ref_id: "BI-DEMO-001",
+    college_code: "BI",
+    title: "Competitive Programming Contest",
+    date: "2026-09-28",
+    venue: "Programming Lab",
+    category: "Coding",
+    description:
+      "Test your algorithms and programming skills in a competitive coding contest.",
+    registration_link: ""
+  },
+  {
+    ref_id: "CD-DEMO-001",
+    college_code: "CD",
+    title: "Cyber Security Awareness Workshop",
+    date: "2026-10-02",
+    venue: "Seminar Hall",
+    category: "Cybersecurity",
+    description:
+      "Learn about common cyber threats, security practices, privacy and safe online behaviour.",
+    registration_link: ""
+  },
+  {
+    ref_id: "CG-DEMO-001",
+    college_code: "CG",
+    title: "Project Showcase 2026",
+    date: "2026-10-15",
+    venue: "College Auditorium",
+    category: "Project",
+    description:
+      "Students present their academic and innovative projects to faculty and fellow students.",
+    registration_link: ""
+  },
+  {
+    ref_id: "DB-DEMO-001",
+    college_code: "DB",
+    title: "Cloud Computing Workshop",
+    date: "2026-09-30",
+    venue: "Computer Lab",
+    category: "Workshop",
+    description:
+      "Introduction to cloud computing concepts, deployment models and modern cloud platforms.",
+    registration_link: ""
+  },
+  {
+    ref_id: "EP-DEMO-001",
+    college_code: "EP",
+    title: "Campus Coding Challenge",
+    date: "2026-10-08",
+    venue: "CSE Lab",
+    category: "Coding",
+    description:
+      "A coding competition designed to improve logical thinking and programming skills.",
+    registration_link: ""
+  },
+  {
+    ref_id: "EW-DEMO-001",
+    college_code: "EW",
+    title: "Robotics Workshop",
+    date: "2026-10-12",
+    venue: "Robotics Lab",
+    category: "Robotics",
+    description:
+      "Hands-on introduction to robotics, sensors, motors and basic automation.",
+    registration_link: ""
+  },
+  {
+    ref_id: "HK-DEMO-001",
+    college_code: "HK",
+    title: "Career & Placement Seminar",
+    date: "2026-09-24",
+    venue: "Main Auditorium",
+    category: "Career",
+    description:
+      "Career guidance session covering placement preparation, resumes, interviews and technical skills.",
+    registration_link: ""
+  },
+  {
+    ref_id: "JS-DEMO-001",
+    college_code: "JS",
+    title: "Open Source Development Meetup",
+    date: "2026-10-01",
+    venue: "Innovation Hall",
+    category: "Technology",
+    description:
+      "Learn how students can contribute to open-source software and build their developer portfolios.",
+    registration_link: ""
+  },
+  {
+    ref_id: "KS-DEMO-001",
+    college_code: "KS",
+    title: "Java Programming Workshop",
+    date: "2026-09-19",
+    venue: "Programming Lab",
+    category: "Workshop",
+    description:
+      "A practical Java programming workshop covering OOP, collections and problem solving.",
+    registration_link: ""
+  },
+  {
+    ref_id: "KI-DEMO-001",
+    college_code: "KI",
+    title: "Tech Quiz 2026",
+    date: "2026-10-06",
+    venue: "Seminar Hall",
+    category: "Competition",
+    description:
+      "A technology quiz covering programming, computers, AI, electronics and general technology.",
+    registration_link: ""
+  },
+  {
+    ref_id: "KN-DEMO-001",
+    college_code: "KN",
+    title: "Mobile App Development Workshop",
+    date: "2026-10-14",
+    venue: "Computer Lab",
+    category: "Workshop",
+    description:
+      "Introduction to mobile application development and modern app development workflows.",
+    registration_link: ""
+  },
+  {
+    ref_id: "ME-DEMO-001",
+    college_code: "ME",
+    title: "Entrepreneurship & Startup Talk",
+    date: "2026-09-29",
+    venue: "Auditorium",
+    category: "Entrepreneurship",
+    description:
+      "An interactive session on startups, product development, entrepreneurship and innovation.",
+    registration_link: ""
+  },
+  {
+    ref_id: "OX-DEMO-001",
+    college_code: "OX",
+    title: "AI Project Competition",
+    date: "2026-10-18",
+    venue: "Project Exhibition Hall",
+    category: "AI",
+    description:
+      "Students showcase artificial intelligence projects and compete for the best innovation.",
+    registration_link: ""
+  },
+  {
+    ref_id: "RN-DEMO-001",
+    college_code: "RN",
+    title: "Full Stack Development Workshop",
+    date: "2026-10-03",
+    venue: "CSE Department",
+    category: "Workshop",
+    description:
+      "Learn frontend, backend, databases and API development through practical examples.",
+    registration_link: ""
+  },
+  {
+    ref_id: "MV-DEMO-001",
+    college_code: "MV",
+    title: "Engineering Innovation Challenge",
+    date: "2026-10-20",
+    venue: "Innovation Centre",
+    category: "Competition",
+    description:
+      "Teams develop creative engineering solutions to real-world problems.",
+    registration_link: ""
+  },
+  {
+    ref_id: "TJ-DEMO-001",
+    college_code: "TJ",
+    title: "Python Programming Workshop",
+    date: "2026-09-27",
+    venue: "Computer Lab",
+    category: "Workshop",
+    description:
+      "Learn Python programming fundamentals with practical coding exercises.",
+    registration_link: ""
+  },
+  {
+    ref_id: "VI-DEMO-001",
+    college_code: "VI",
+    title: "Sports Meet 2026",
+    date: "2026-10-07",
+    venue: "College Ground",
+    category: "Sports",
+    description:
+      "Inter-department sports activities featuring multiple student competitions.",
+    registration_link: ""
+  },
+  {
+    ref_id: "VK-DEMO-001",
+    college_code: "VK",
+    title: "Cultural Fest 2026",
+    date: "2026-10-25",
+    venue: "Open Air Stage",
+    category: "Cultural",
+    description:
+      "A student cultural celebration featuring music, dance, art and performances.",
+    registration_link: ""
+  },
+  {
+    ref_id: "AH-DEMO-001",
+    college_code: "AH",
+    title: "Database Management Workshop",
+    date: "2026-10-09",
+    venue: "Database Lab",
+    category: "Workshop",
+    description:
+      "Learn database design, SQL, normalization and practical database management.",
+    registration_link: ""
+  },
+  {
+    ref_id: "AK-DEMO-001",
+    college_code: "AK",
+    title: "Women in Technology Seminar",
+    date: "2026-10-11",
+    venue: "Main Auditorium",
+    category: "Seminar",
+    description:
+      "A technology-focused seminar highlighting opportunities, careers and innovation.",
+    registration_link: ""
+  },
+  {
+    ref_id: "JT-DEMO-001",
+    college_code: "JT",
+    title: "Machine Learning Bootcamp",
+    date: "2026-10-16",
+    venue: "AI Lab",
+    category: "AI",
+    description:
+      "A practical introduction to machine learning concepts, datasets and model development.",
+    registration_link: ""
+  },
+  {
+    ref_id: "DT-DEMO-001",
+    college_code: "DT",
+    title: "Innovation & Startup Fest",
+    date: "2026-10-22",
+    venue: "Main Auditorium",
+    category: "Entrepreneurship",
+    description:
+      "Students explore startup ideas, innovation, entrepreneurship and product development.",
+    registration_link: ""
+  },
+  {
+    ref_id: "RR-DEMO-001",
+    college_code: "RR",
+    title: "Coding & Technology Meetup",
+    date: "2026-09-26",
+    venue: "Technology Centre",
+    category: "Technology",
+    description:
+      "A student meetup covering software development, emerging technologies and career opportunities.",
+    registration_link: ""
+  },
+  {
+    ref_id: "VA-DEMO-001",
+    college_code: "VA",
+    title: "Placement Preparation Workshop",
+    date: "2026-10-04",
+    venue: "Seminar Hall",
+    category: "Career",
+    description:
+      "Placement preparation covering aptitude, coding, technical interviews and communication skills.",
+    registration_link: ""
+  },
+  {
+    ref_id: "SG-DEMO-001",
+    college_code: "SG",
+    title: "Tech Fest 2026",
+    date: "2026-10-30",
+    venue: "College Campus",
+    category: "Technology",
+    description:
+      "A technology festival featuring competitions, demonstrations, workshops and student projects.",
+    registration_link: ""
+  },
+  {
+    ref_id: "SB-DEMO-001",
+    college_code: "SB",
+    title: "Hackathon: Build for Students",
+    date: "2026-11-05",
+    venue: "Innovation Lab",
+    category: "Hackathon",
+    description:
+      "Build software solutions that solve practical problems faced by students.",
+    registration_link: ""
+  },
+  {
+    ref_id: "SV-DEMO-001",
+    college_code: "SV",
+    title: "Cloud & DevOps Seminar",
+    date: "2026-10-28",
+    venue: "Seminar Hall",
+    category: "Technology",
+    description:
+      "Introduction to cloud infrastructure, deployment pipelines and DevOps practices.",
+    registration_link: ""
+  },
+  {
+    ref_id: "JB-DEMO-001",
+    college_code: "JB",
+    title: "Cybersecurity Challenge",
+    date: "2026-11-08",
+    venue: "Computer Lab",
+    category: "Cybersecurity",
+    description:
+      "A beginner-friendly cybersecurity challenge focused on security concepts and problem solving.",
+    registration_link: ""
+  },
+  {
+    ref_id: "CC-DEMO-001",
+    college_code: "CC",
+    title: "Engineering Project Exhibition",
+    date: "2026-11-12",
+    venue: "Exhibition Hall",
+    category: "Project",
+    description:
+      "Students demonstrate engineering projects and innovative prototypes.",
+    registration_link: ""
+  },
+  {
+    ref_id: "KT-DEMO-001",
+    college_code: "KT",
+    title: "DSA Problem Solving Contest",
+    date: "2026-11-15",
+    venue: "Programming Lab",
+    category: "Coding",
+    description:
+      "Practice data structures and algorithms through a competitive problem-solving contest.",
+    registration_link: ""
+  },
+  {
+    ref_id: "VE-DEMO-001",
+    college_code: "VE",
+    title: "Engineering Career Fair",
+    date: "2026-11-20",
+    venue: "Main Campus",
+    category: "Career",
+    description:
+      "A career-focused event connecting students with opportunities and industry guidance.",
+    registration_link: ""
+  },
+  {
+    ref_id: "MH-DEMO-001",
+    college_code: "MH",
+    title: "Mysuru Tech Innovation Day",
+    date: "2026-11-22",
+    venue: "Innovation Centre",
+    category: "Technology",
+    description:
+      "A technology event featuring student projects, demonstrations and innovation talks.",
+    registration_link: ""
+  },
+  {
+    ref_id: "MT-DEMO-001",
+    college_code: "MT",
+    title: "Robotics & Automation Workshop",
+    date: "2026-11-25",
+    venue: "Robotics Laboratory",
+    category: "Robotics",
+    description:
+      "Hands-on introduction to robotics, automation systems and intelligent machines.",
+    registration_link: ""
+  },
+  {
+    ref_id: "NN-DEMO-001",
+    college_code: "NN",
+    title: "Software Development Meetup",
+    date: "2026-11-28",
+    venue: "Seminar Hall",
+    category: "Technology",
+    description:
+      "Developers and students discuss software engineering, projects and modern development tools.",
+    registration_link: ""
+  },
+  {
+    ref_id: "PA-DEMO-001",
+    college_code: "PA",
+    title: "AI Career Awareness Session",
+    date: "2026-12-02",
+    venue: "Auditorium",
+    category: "Career",
+    description:
+      "Explore AI career paths, required skills, projects and opportunities in the technology industry.",
+    registration_link: ""
+  },
+  {
+    ref_id: "VM-DEMO-001",
+    college_code: "VM",
+    title: "Student Innovation Challenge",
+    date: "2026-12-05",
+    venue: "Innovation Hall",
+    category: "Competition",
+    description:
+      "Students compete by presenting innovative solutions to real-world challenges.",
+    registration_link: ""
+  },
+  {
+    ref_id: "VP-DEMO-001",
+    college_code: "VP",
+    title: "Coding Bootcamp",
+    date: "2026-12-08",
+    venue: "Computer Science Lab",
+    category: "Coding",
+    description:
+      "An intensive coding session focused on programming fundamentals and interview preparation.",
+    registration_link: ""
+  },
+  {
+    ref_id: "UB-DEMO-001",
+    college_code: "UB",
+    title: "Engineering Research Seminar",
+    date: "2026-12-10",
+    venue: "Seminar Hall",
+    category: "Research",
+    description:
+      "Students learn about engineering research, academic projects and innovation opportunities.",
+    registration_link: ""
+  },
+  {
+    ref_id: "MO-DEMO-001",
+    college_code: "MO",
+    title: "Full Stack Web Development Workshop",
+    date: "2026-12-12",
+    venue: "Computer Lab",
+    category: "Workshop",
+    description:
+      "Hands-on session covering frontend development, backend APIs and database integration.",
+    registration_link: ""
+  },
+  {
+    ref_id: "MU-DEMO-001",
+    college_code: "MU",
+    title: "Technology Quiz & Coding Challenge",
+    date: "2026-12-15",
+    venue: "Main Auditorium",
+    category: "Competition",
+    description:
+      "A combined technology quiz and coding challenge for engineering students.",
+    registration_link: ""
+  }
+];
+
+// ============================================================
+// MAIN
+// ============================================================
+
+async function main() {
+  console.log("=================================");
+  console.log("CIRCULAR DEMO EVENT SEEDER");
+  console.log("=================================");
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    // Make sure the events table exists.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS events (
+        id SERIAL PRIMARY KEY,
+        ref_id TEXT,
+        title TEXT NOT NULL,
+        date TEXT NOT NULL,
+        venue TEXT NOT NULL,
+        category TEXT NOT NULL,
+        description TEXT DEFAULT '',
+        registration_link TEXT DEFAULT '',
+        college_id INTEGER REFERENCES colleges(id),
+        posted_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMPTZ DEFAULT now()
+      )
+    `);
+
+    // Add a unique index for our demo reference IDs.
+    // This prevents this script from creating duplicate events
+    // when you run it more than once.
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS
+      events_ref_id_unique
+      ON events(ref_id)
+      WHERE ref_id IS NOT NULL
+    `);
+
+    let inserted = 0;
+    let skipped = 0;
+
+    for (const event of EVENTS) {
+      // Find the college using its VTU code.
+      const collegeResult = await client.query(
+        `
+        SELECT id, name
+        FROM colleges
+        WHERE code = $1
+        ORDER BY id
+        LIMIT 1
+        `,
+        [event.college_code]
+      );
+
+      if (collegeResult.rows.length === 0) {
+        console.log(
+          `⚠️ College not found: ${event.college_code} - ${event.title}`
+        );
+
+        skipped++;
+        continue;
+      }
+
+      const college = collegeResult.rows[0];
+
+      const result = await client.query(
+        `
+        INSERT INTO events
+        (
+          ref_id,
+          title,
+          date,
+          venue,
+          category,
+          description,
+          registration_link,
+          college_id,
+          posted_by
+        )
+        VALUES
+        ($1,$2,$3,$4,$5,$6,$7,$8,NULL)
+        ON CONFLICT (ref_id)
+        DO UPDATE SET
+          title = EXCLUDED.title,
+          date = EXCLUDED.date,
+          venue = EXCLUDED.venue,
+          category = EXCLUDED.category,
+          description = EXCLUDED.description,
+          registration_link = EXCLUDED.registration_link,
+          college_id = EXCLUDED.college_id
+        RETURNING id
+        `,
+        [
+          event.ref_id,
+          event.title,
+          event.date,
+          event.venue,
+          event.category,
+          event.description,
+          event.registration_link,
+          college.id
+        ]
+      );
+
+      inserted++;
+
+      console.log(
+        `✅ ${event.ref_id} | ${college.name} | ${event.title}`
+      );
+    }
+
+    await client.query("COMMIT");
+
+    console.log("");
+    console.log("=================================");
+    console.log("✅ EVENT SEEDING COMPLETED");
+    console.log("=================================");
+    console.log(`Events inserted/updated: ${inserted}`);
+    console.log(`Events skipped: ${skipped}`);
+    console.log("=================================");
+
+  } catch (error) {
+    await client.query("ROLLBACK");
+
+    console.error("");
+    console.error("❌ EVENT SEEDING FAILED");
+    console.error(error);
+
+    process.exitCode = 1;
+
+  } finally {
+    client.release();
+    await pool.end();
+  }
+}
+
+main();

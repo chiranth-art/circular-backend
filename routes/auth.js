@@ -1,164 +1,413 @@
-// routes/auth.js
+// routes/events.js
+
 const express = require("express");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const { readDB, writeDB } = require("../db");
+const { query } = require("../db");
+const { verifyToken, requireVerifiedAdmin } = require("../middleware/auth");
+const {
+  createBulkNotifications
+} = require("../services/notificationService");
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-this";
 
-function findUserByEmail(db, email) {
-  return db.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-}
-
-router.post("/signup/student", async (req, res) => {
+/*
+|--------------------------------------------------------------------------
+| GET ALL EVENTS
+|--------------------------------------------------------------------------
+*/
+router.get("/", async (req, res) => {
   try {
-    const { full_name, email, password, college_id, branch, year } = req.body;
+    const result = await query(`
+      SELECT
+        e.*,
+        c.name AS college_name
+      FROM events e
+      LEFT JOIN colleges c
+        ON e.college_id = c.id
+      ORDER BY e.date ASC
+    `);
 
-    if (!full_name || !email || !password) {
-      return res.status(400).json({ error: "full_name, email, and password are required." });
-    }
-
-    const db = await readDB();
-
-    if (findUserByEmail(db, email)) {
-      return res.status(409).json({ error: "An account with this email already exists." });
-    }
-
-    let validCollegeId = null;
-    if (college_id !== undefined && college_id !== null && college_id !== "") {
-      const collegeExists = db.colleges.some((c) => c.id === Number(college_id));
-      if (!collegeExists) {
-        return res.status(400).json({ error: "Invalid college_id. Call GET /colleges to see valid options." });
-      }
-      validCollegeId = Number(college_id);
-    }
-
-    const password_hash = await bcrypt.hash(password, 10);
-
-    const newUser = {
-      full_name,
-      email,
-      password_hash,
-      role: "student",
-      college_id: validCollegeId,
-      branch: branch || null,
-      year: year || null,
-      is_verified: true
-    };
-
-    db.users.push(newUser);
-    await writeDB(db);
-
-    res.status(201).json({ message: "Student account created.", user_id: newUser.id });
+    res.json(result.rows);
   } catch (err) {
-    console.error("Student signup error:", err);
-    res.status(500).json({ error: "Something went wrong creating your account." });
-  }
-});
-
-router.post("/signup/admin", async (req, res) => {
-  try {
-    const { full_name, email, password, college_id, club_name, designation } = req.body;
-
-    if (!full_name || !email || !password || !college_id || !club_name) {
-      return res.status(400).json({ error: "full_name, email, password, college_id, and club_name are required." });
-    }
-
-    const db = await readDB();
-
-    if (findUserByEmail(db, email)) {
-      return res.status(409).json({ error: "An account with this email already exists." });
-    }
-
-    const college = db.colleges.find((c) => c.id === Number(college_id));
-    if (!college) {
-      return res.status(400).json({ error: "Invalid college_id. Call GET /colleges to see valid options." });
-    }
-
-    const password_hash = await bcrypt.hash(password, 10);
-
-    const emailDomain = email.split("@")[1]?.toLowerCase();
-    const autoVerified = emailDomain === (college.domain || "").toLowerCase();
-
-    const newUser = {
-      full_name,
-      email,
-      password_hash,
-      role: "admin",
-      college_id: Number(college_id),
-      club_name,
-      designation: designation || null,
-      is_verified: autoVerified
-    };
-
-    db.users.push(newUser);
-    await writeDB(db);
-
-    if (!autoVerified) {
-      db.verificationRequests.push({
-        user_id: newUser.id,
-        status: "pending"
-      });
-      await writeDB(db);
-    }
-
-    res.status(201).json({
-      message: autoVerified
-        ? "Admin account created and auto-verified (email domain matched college)."
-        : "Admin account created. Awaiting manual verification since the email domain didn't match your college's registered domain.",
-      user_id: newUser.id,
-      is_verified: autoVerified
+    console.error("Get events error:", err);
+    res.status(500).json({
+      error: "Something went wrong fetching events."
     });
-  } catch (err) {
-    console.error("Admin signup error:", err);
-    res.status(500).json({ error: "Something went wrong creating your account." });
   }
 });
 
-router.post("/login", async (req, res) => {
+/*
+|--------------------------------------------------------------------------
+| SEARCH EVENTS
+|--------------------------------------------------------------------------
+*/
+router.get("/search", async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { q } = req.query;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: "email and password are required." });
+    if (!q) {
+      return res.status(400).json({
+        error: "Search query is required."
+      });
     }
 
-    const db = await readDB();
-    const user = findUserByEmail(db, email);
-
-    if (!user) {
-      return res.status(401).json({ error: "Invalid email or password." });
-    }
-
-    const passwordMatches = await bcrypt.compare(password, user.password_hash);
-    if (!passwordMatches) {
-      return res.status(401).json({ error: "Invalid email or password." });
-    }
-
-    if (user.role === "admin" && !user.is_verified) {
-      return res.status(403).json({ error: "Your admin account is still pending verification." });
-    }
-
-    const token = jwt.sign(
-      { id: user.id, role: user.role, college_id: user.college_id },
-      JWT_SECRET,
-      { expiresIn: "7d" }
+    const result = await query(
+      `
+      SELECT
+        e.*,
+        c.name AS college_name
+      FROM events e
+      LEFT JOIN colleges c
+        ON e.college_id = c.id
+      WHERE
+        e.title ILIKE $1
+        OR e.description ILIKE $1
+        OR e.category ILIKE $1
+        OR e.venue ILIKE $1
+      ORDER BY e.date ASC
+      `,
+      [`%${q}%`]
     );
 
-    res.json({
-      token,
-      user: {
-        id: user.id,
-        full_name: user.full_name,
-        email: user.email,
-        role: user.role,
-        college_id: user.college_id
-      }
-    });
+    res.json(result.rows);
   } catch (err) {
-    console.error("Login error:", err);
-    res.status(500).json({ error: "Something went wrong logging in." });
+    console.error("Search events error:", err);
+    res.status(500).json({
+      error: "Something went wrong searching events."
+    });
+  }
+});
+
+/*
+|--------------------------------------------------------------------------
+| GET EVENTS BY CATEGORY
+|--------------------------------------------------------------------------
+*/
+router.get("/category/:category", async (req, res) => {
+  try {
+    const { category } = req.params;
+
+    const result = await query(
+      `
+      SELECT
+        e.*,
+        c.name AS college_name
+      FROM events e
+      LEFT JOIN colleges c
+        ON e.college_id = c.id
+      WHERE LOWER(e.category) = LOWER($1)
+      ORDER BY e.date ASC
+      `,
+      [category]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Get events by category error:", err);
+    res.status(500).json({
+      error: "Something went wrong fetching events by category."
+    });
+  }
+});
+
+/*
+|--------------------------------------------------------------------------
+| GET EVENTS BY COLLEGE
+|--------------------------------------------------------------------------
+*/
+router.get("/college/:collegeId", async (req, res) => {
+  try {
+    const { collegeId } = req.params;
+
+    const result = await query(
+      `
+      SELECT
+        e.*,
+        c.name AS college_name
+      FROM events e
+      LEFT JOIN colleges c
+        ON e.college_id = c.id
+      WHERE e.college_id = $1
+      ORDER BY e.date ASC
+      `,
+      [collegeId]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Get college events error:", err);
+    res.status(500).json({
+      error: "Something went wrong fetching college events."
+    });
+  }
+});
+
+/*
+|--------------------------------------------------------------------------
+| GET UPCOMING EVENTS
+|--------------------------------------------------------------------------
+*/
+router.get("/upcoming", async (req, res) => {
+  try {
+    const result = await query(`
+      SELECT
+        e.*,
+        c.name AS college_name
+      FROM events e
+      LEFT JOIN colleges c
+        ON e.college_id = c.id
+      WHERE e.date >= NOW()
+      ORDER BY e.date ASC
+    `);
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Get upcoming events error:", err);
+    res.status(500).json({
+      error: "Something went wrong fetching upcoming events."
+    });
+  }
+});
+
+/*
+|--------------------------------------------------------------------------
+| CREATE EVENT
+|--------------------------------------------------------------------------
+|
+| Only a verified admin can create an event.
+|
+| Flow:
+|
+| Admin creates event
+|       ↓
+| Event saved in PostgreSQL
+|       ↓
+| Find students from same college
+|       ↓
+| Create notification for each student
+|
+|--------------------------------------------------------------------------
+*/
+router.post(
+  "/",
+  verifyToken,
+  requireVerifiedAdmin,
+  async (req, res) => {
+    try {
+      /*
+      |--------------------------------------------------------------------------
+      | REQUEST BODY
+      |--------------------------------------------------------------------------
+      */
+      const {
+        ref_id,
+        title,
+        date,
+        venue,
+        category,
+        description,
+        registration_link,
+        college_id
+      } = req.body;
+
+      /*
+      |--------------------------------------------------------------------------
+      | VALIDATION
+      |--------------------------------------------------------------------------
+      */
+      if (
+        !title ||
+        !date ||
+        !venue ||
+        !category ||
+        !description ||
+        !college_id
+      ) {
+        return res.status(400).json({
+          error:
+            "title, date, venue, category, description, and college_id are required."
+        });
+      }
+
+      /*
+      |--------------------------------------------------------------------------
+      | CHECK COLLEGE
+      |--------------------------------------------------------------------------
+      */
+      const collegeResult = await query(
+        `
+        SELECT id, name
+        FROM colleges
+        WHERE id = $1
+        `,
+        [Number(college_id)]
+      );
+
+      if (collegeResult.rows.length === 0) {
+        return res.status(400).json({
+          error: "Invalid college_id."
+        });
+      }
+
+      const college = collegeResult.rows[0];
+
+      /*
+      |--------------------------------------------------------------------------
+      | ADMIN CAN ONLY CREATE EVENTS FOR THEIR OWN COLLEGE
+      |--------------------------------------------------------------------------
+      */
+      if (
+        req.user.college_id !== null &&
+        Number(req.user.college_id) !== Number(college_id)
+      ) {
+        return res.status(403).json({
+          error: "You can only create events for your own college."
+        });
+      }
+
+      /*
+      |--------------------------------------------------------------------------
+      | CREATE EVENT
+      |--------------------------------------------------------------------------
+      */
+      const eventResult = await query(
+        `
+        INSERT INTO events
+        (
+          ref_id,
+          title,
+          date,
+          venue,
+          category,
+          description,
+          registration_link,
+          college_id,
+          posted_by
+        )
+        VALUES
+        (
+          $1,
+          $2,
+          $3,
+          $4,
+          $5,
+          $6,
+          $7,
+          $8,
+          $9
+        )
+        RETURNING *
+        `,
+        [
+          ref_id || null,
+          title,
+          date,
+          venue,
+          category,
+          description,
+          registration_link || null,
+          Number(college_id),
+          req.user.id
+        ]
+      );
+
+      const event = eventResult.rows[0];
+
+      /*
+      |--------------------------------------------------------------------------
+      | FIND STUDENTS FROM SAME COLLEGE
+      |--------------------------------------------------------------------------
+      */
+      const studentsResult = await query(
+        `
+        SELECT id
+        FROM users
+        WHERE role = 'student'
+        AND college_id = $1
+        `,
+        [Number(college_id)]
+      );
+
+      const studentIds = studentsResult.rows.map(
+        (student) => student.id
+      );
+
+      /*
+      |--------------------------------------------------------------------------
+      | CREATE IN-APP NOTIFICATIONS
+      |--------------------------------------------------------------------------
+      */
+      let notificationsCreated = 0;
+
+      if (studentIds.length > 0) {
+        const notifications = await createBulkNotifications(
+          studentIds,
+          {
+            type: "new_event",
+            title: `New Event: ${event.title}`,
+            message: `${college.name} has posted a new event on Circular.`,
+            eventId: event.id
+          }
+        );
+
+        notificationsCreated = notifications.length;
+      }
+
+      /*
+      |--------------------------------------------------------------------------
+      | SUCCESS
+      |--------------------------------------------------------------------------
+      */
+      return res.status(201).json({
+        message: "Event created successfully.",
+        event,
+        notifications_created: notificationsCreated
+      });
+    } catch (err) {
+      console.error("Create event error:", err);
+
+      return res.status(500).json({
+        error: "Something went wrong creating the event.",
+        details: err.message
+      });
+    }
+  }
+);
+
+/*
+|--------------------------------------------------------------------------
+| GET SINGLE EVENT
+|--------------------------------------------------------------------------
+*/
+router.get("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await query(
+      `
+      SELECT
+        e.*,
+        c.name AS college_name
+      FROM events e
+      LEFT JOIN colleges c
+        ON e.college_id = c.id
+      WHERE e.id = $1
+      `,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: "Event not found."
+      });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("Get event error:", err);
+
+    res.status(500).json({
+      error: "Something went wrong fetching the event."
+    });
   }
 });
 
