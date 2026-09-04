@@ -13,6 +13,7 @@ const verificationRoutes = require("./routes/verification");
 const statsRoutes = require("./routes/stats");
 const bookmarkRoutes = require("./routes/bookmarks");
 const notificationRoutes = require("./notifications");
+const adminRoutes = require("./routes/admin");
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -32,6 +33,8 @@ app.use("/admin/verification-queue", verificationRoutes);
 app.use("/stats", statsRoutes);
 app.use("/bookmarks", bookmarkRoutes);
 app.use("/notifications", notificationRoutes);
+app.use("/admin", adminRoutes);
+
 
 
 app.listen(PORT, () => {
