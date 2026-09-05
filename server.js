@@ -14,6 +14,7 @@ const statsRoutes = require("./routes/stats");
 const bookmarkRoutes = require("./routes/bookmarks");
 const notificationRoutes = require("./notifications");
 const adminRoutes = require("./routes/admin");
+const profileRoutes = require("./routes/profile");
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -34,6 +35,8 @@ app.use("/stats", statsRoutes);
 app.use("/bookmarks", bookmarkRoutes);
 app.use("/notifications", notificationRoutes);
 app.use("/admin", adminRoutes);
+app.use("/profile", profileRoutes);
+
 
 
 
